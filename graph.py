@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import r2_score
-#from datetime import datetime
-#import seaborn as sns
+import streamlit as st
 
 def create_bitcoin_analysis():
     bitcoin_data = [
@@ -156,7 +155,6 @@ def format_polynomial_equation(coefficients, degree):
             coef_abs = abs(coef)
             coef_str = f" {sign} {coef_abs:.6e}" if coef_abs < 0.001 or coef_abs > 1000 else f" {sign} {coef_abs:.6f}"
         
-        
         if power == 0:
             term = coef_str
         elif power == 1:
@@ -174,8 +172,7 @@ def format_polynomial_equation(coefficients, degree):
     
     return equation + "".join(terms)
 
-def plot_custom_regression_analysis(df, degree):
-    plt.style.use('seaborn-v0_8')
+def create_regression_plot(df, degree):
     fig, ax = plt.subplots(figsize=(12, 8))
     
     X = df['Day'].values.reshape(-1, 1)
@@ -202,36 +199,47 @@ def plot_custom_regression_analysis(df, degree):
     ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
     ax.ticklabel_format(style='plain', axis='y')
-
     ax.invert_xaxis()
     
-    print(f"\nDegree {degree} - R²: {r2_poly:.6f}")
-    print(f"Equation: {polynomial_equation}")
-    
-    plt.tight_layout()
-    plt.show()
-    
-    return {
+    return fig, {
         'r2': r2_poly,
         'predictions': y_pred_poly,
         'equation': polynomial_equation
     }
 
-def run_interactive_analysis():
+# Streamlit App
+def main():
+    st.title("Bitcoin Price Polynomial Regression Analysis")
+    st.write("Analyze Bitcoin price trends using polynomial regression of different degrees.")
+    
+    # Load data
     df = create_bitcoin_analysis()
     
-    while True:
-        try:
-            degree = int(input("Enter polynomial degree: "))
-            if degree < 1:
-                print("Please enter a positive integer.")
-                continue
-            break
-        except ValueError:
-            print("Please enter a valid integer.")
+    # Sidebar controls
+    st.sidebar.header("Parameters")
+    degree = st.sidebar.slider("Polynomial Degree", min_value=1, max_value=10, value=2)
     
-    results = plot_custom_regression_analysis(df, degree)
-    return df, results
+    # Create and display plot
+    fig, results = create_regression_plot(df, degree)
+    st.pyplot(fig)
+    
+    # Display results
+    st.subheader("Results")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.metric("R² Score", f"{results['r2']:.6f}")
+    
+    with col2:
+        st.metric("Polynomial Degree", degree)
+    
+    st.subheader("Polynomial Equation")
+    st.code(results['equation'])
+    
+    # Display data table
+    if st.checkbox("Show Raw Data"):
+        st.subheader("Bitcoin Price Data")
+        st.dataframe(df)
 
 if __name__ == "__main__":
-    df, results = run_interactive_analysis()
+    main()
